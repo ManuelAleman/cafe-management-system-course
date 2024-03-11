@@ -1,5 +1,6 @@
 package com.maleman.cafe.serviceImpl;
 
+import com.google.common.base.Strings;
 import com.maleman.cafe.JWT.CustomerUsersDetailsService;
 import com.maleman.cafe.JWT.JwtFilter;
 import com.maleman.cafe.JWT.JwtUtil;
@@ -111,6 +112,49 @@ public class UserServiceimpl implements UserService {
             ex.printStackTrace();
         }
 
+        return CafeUtils.getResponseEntity(CafeConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @Override
+    public ResponseEntity<String> checkToken() {
+        return CafeUtils.getResponseEntity("true", HttpStatus.OK);
+    }
+
+    @Override
+    public ResponseEntity<String> changePassword(Map<String, String> requestMap) {
+        try {
+            User userObj = userDao.findByEmail(jwtFilter.getCurrentUserEmail());
+            if(userObj != null){
+                if(userObj.getPassword().equals(requestMap.get("oldPassword"))){
+                    if(userObj.getPassword().equals(requestMap.get("newPassword")))
+                        return CafeUtils.getResponseEntity("You can't use the same password again", HttpStatus.BAD_REQUEST);
+
+                    userObj.setPassword(requestMap.get("newPassword"));
+                    userDao.save(userObj);
+                    return CafeUtils.getResponseEntity("Password updated succesfully", HttpStatus.OK);
+                }
+                return CafeUtils.getResponseEntity("Incorrect old password", HttpStatus.BAD_REQUEST);
+            }
+            return CafeUtils.getResponseEntity(CafeConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (Exception ex){
+            ex.printStackTrace();
+        }
+        return CafeUtils.getResponseEntity(CafeConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @Override
+    public ResponseEntity<String> forgotPassword(Map<String, String> requestMap) {
+        try {
+            User user = userDao.findByEmail(requestMap.get("email"));
+            if (!Objects.isNull(user) && !Strings.isNullOrEmpty(user.getEmail())) {
+                emailUtils.forgotMail(user.getEmail(), "Credentials By Cafe Management", user.getPassword());
+                return CafeUtils.getResponseEntity("Check your email for credentials", HttpStatus.OK);
+            } else {
+                return CafeUtils.getResponseEntity("Email Not Found", HttpStatus.BAD_REQUEST);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return CafeUtils.getResponseEntity(CafeConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
